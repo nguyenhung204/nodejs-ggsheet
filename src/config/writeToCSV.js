@@ -1,11 +1,11 @@
-const fs = require('fs');
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+import fs from 'fs';
+import { createObjectCsvWriter } from 'csv-writer';
 
-const writeDataToCSV = async (data) => {
+export const writeDataToCSV = async (data) => {
     const filePath = 'data/data.csv';
     const fileExists = fs.existsSync(filePath);
 
-    const csvWriter = createCsvWriter({
+    const csvWriter = createObjectCsvWriter({
         path: filePath,
         header: [
             { id: 'mssvInput', title: 'MSSV' },
@@ -16,8 +16,4 @@ const writeDataToCSV = async (data) => {
 
     await csvWriter.writeRecords(data);
     console.log('Data has been written to CSV file');
-};
-
-module.exports = {
-    writeDataToCSV
 };

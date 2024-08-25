@@ -1,9 +1,9 @@
 import moment from "moment";
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-require("dotenv").config();
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import 'dotenv/config';
 import { JWT } from 'google-auth-library';
-const { writeDataToCSV } = require('../config/writeToCSV');
-const { cache, addToCache, clearCache, isCacheEmpty } = require('../config/cache');
+import { writeDataToCSV } from '../config/writeToCSV.js';
+import {cache, addToCache, clearCache, isCacheEmpty } from '../config/cache.js';
 
 const getTimeInMilliseconds = () => {
     return new Date().getTime();
@@ -79,7 +79,8 @@ let getGoogleSheet = async (req, res) => {
     }
 };
 
-module.exports = {
+
+export default {
     getHomepage: getHomepage,
     getGoogleSheet: getGoogleSheet
 };
