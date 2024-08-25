@@ -7,25 +7,21 @@ let router = express.Router();
 
 let initWebRoutes = (app) => {
     router.get("/", homepageController.getHomepage);
-    router.post("/excel", homepageController.getGoogleSheet); 
+    router.post("/excel", homepageController.getGoogleSheet);
 
-    // Endpoint to download the CSV file
     router.get("/download-csv", async (req, res) => {
         const filePath = 'public/data.csv';
         const fileExists = fs.existsSync(filePath);
-    
+
         if (!fileExists) {
-            // Tạo file CSV trống nếu file không tồn tại
             await writeDataToCSV([]);
         } else {
-            // Kiểm tra xem file có dữ liệu hay không
             const fileData = fs.readFileSync(filePath, 'utf8');
             if (!fileData.trim()) {
-                // Tạo file CSV trống nếu file không có dữ liệu
                 await writeDataToCSV([]);
             }
         }
-    
+
         res.download(filePath, 'data.csv', (err) => {
             if (err) {
                 console.error("Error downloading the file:", err);
@@ -34,7 +30,13 @@ let initWebRoutes = (app) => {
         });
     });
 
-    return app.use("/", router);
+    app.use("/", router);
+
+    // Middleware xử lý lỗi toàn cục
+    app.use((err, req, res, next) => {
+        console.error('Unhandled error:', err);
+        res.status(500).send('Internal Server Error');
+    });
 };
 
 export default initWebRoutes;

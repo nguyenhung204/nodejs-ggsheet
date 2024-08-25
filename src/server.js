@@ -26,3 +26,12 @@ let port = process.env.PORT || 8080;
 app.listen(port, ()=>{
    console.log(`App is running at the port ${port}`);
 });
+// Xử lý các lỗi không được bắt
+process.on('unhandledRejection', (reason, promise) => {
+   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+   console.error('Uncaught Exception:', error);
+   process.exit(1); // Tùy chọn: Thoát ứng dụng với mã lỗi
+});

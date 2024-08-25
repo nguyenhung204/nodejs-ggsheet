@@ -59,6 +59,10 @@ let getHomepage = async (req, res) => {
 };
 
 const getGoogleSheet = async (req, res) => {
+    if (!req.body || !req.body.MSSV) {
+        return res.status(400).send({ message: 'MSSV is required' });
+    }
+
     let mssvArray = Array.isArray(req.body.MSSV) ? req.body.MSSV : [req.body.MSSV];
     console.log(`MSSV: ${mssvArray}`);
 
@@ -66,13 +70,11 @@ const getGoogleSheet = async (req, res) => {
         const currentDate = new Date();
         const formattedDate = moment(currentDate).tz("Asia/Ho_Chi_Minh").format("HH:mm DD/MM/YYYY");
 
-        // Lọc các MSSV hợp lệ
         const validMssvArray = mssvArray.filter(mssv => isValidMssv(mssv));
         if (validMssvArray.length === 0) {
             return res.send({ message: 'Không có MSSV hợp lệ' });
         }
 
-        // Kiểm tra xem MSSV hợp lệ có tồn tại trong Google Sheet hay không
         const nonExistentMssv = await doesMssvExist(validMssvArray);
         const existentMssvArray = validMssvArray.filter(mssv => mssv !== nonExistentMssv);
 
@@ -80,13 +82,12 @@ const getGoogleSheet = async (req, res) => {
             return res.send({ message: 'Không có MSSV tồn tại trong sheet' });
         }
 
-        // Lưu dữ liệu vào cache
         existentMssvArray.forEach(mssv => addToCache(mssv.toString().trim(), formattedDate));
 
         return res.send({ message: 'Yêu cầu đã được lưu vào bộ nhớ cache.', validMssv: existentMssvArray });
     } catch (e) {
-        console.error(e);
-        return res.send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
+        console.error('Error in getGoogleSheet:', e);
+        return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
     }
 };
 
