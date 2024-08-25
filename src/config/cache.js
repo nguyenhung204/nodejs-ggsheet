@@ -1,12 +1,16 @@
 export const cache = {
     data: [],
     timestamp: null,
-    ttl: 120000 
+    ttl: 1000 
 };
 
 export const addToCache = (mssvInput, formattedDate) => {
-    cache.data.push({ mssvInput, formattedDate });
-    cache.timestamp = Date.now();
+    // Loại bỏ khoảng trắng và dấu phẩy
+    const exists = cache.data.some(item => item.mssvInput === mssvInput);
+    if (!exists) {
+        cache.data.push({ mssvInput: mssvInput, formattedDate });
+        cache.timestamp = Date.now();
+    }
 };
 
 export const clearCache = () => {
@@ -17,4 +21,3 @@ export const clearCache = () => {
 export const isCacheEmpty = () => {
     return cache.data.length === 0;
 };
-
