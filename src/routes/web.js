@@ -9,7 +9,7 @@ let initWebRoutes = (app) => {
 
     // Endpoint to download the CSV file
     router.get("/download-csv", (req, res) => {
-        const filePath = 'public/data/data.csv';
+        const filePath = 'public/data.csv';
         res.download(filePath, 'data.csv', (err) => {
             if (err) {
                 console.error("Error downloading the file:", err);
