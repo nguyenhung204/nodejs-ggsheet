@@ -8,6 +8,7 @@ let router = express.Router();
 let initWebRoutes = (app) => {
     router.get("/", homepageController.getHomepage);
     router.post("/excel", homepageController.getGoogleSheet);
+    router.get("/all-mssv-seats", homepageController.getAllMssvAndSeats);
 
     router.get("/download-csv", async (req, res) => {
         const filePath = 'public/data.csv';

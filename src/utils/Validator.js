@@ -19,5 +19,13 @@ export const doesMssvExist = async (mssvArray) => {
     const rows = await sheet.getRows();
     const sheetMssvMap = new Map(rows.map(row => [row.get('MSSV').trim(), row]));
 
-    return mssvArray.filter(mssv => !sheetMssvMap.has(mssv.toString().trim()));
+    const nonExistentMssv = mssvArray.filter(mssv => !sheetMssvMap.has(mssv.toString().trim()));
+    const existentMssvInfo = mssvArray
+        .filter(mssv => sheetMssvMap.has(mssv.toString().trim()))
+        .map(mssv => ({
+            mssv,
+            seat: sheetMssvMap.get(mssv.toString().trim()).get('CHỖ NGỒI'),
+        }));
+
+    return { nonExistentMssv, existentMssvInfo };
 };

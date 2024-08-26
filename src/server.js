@@ -33,5 +33,5 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
    console.error('Uncaught Exception:', error);
-   process.exit(1); // Tùy chọn: Thoát ứng dụng với mã lỗi
+   process.exit(1); 
 });

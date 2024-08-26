@@ -38,7 +38,7 @@ const sendCachedDataToGoogleSheet = async () => {
                 // Update row using Map lookup
                 const row = sheetMssvMap.get(mssv);
                 if (row) {
-                    row.set('Điểm danh', item.formattedDate);
+                    row.set('ĐIỂM DANH', item.formattedDate);
                     await row.save();
                     console.log(`Đã cập nhật dòng dữ liệu cho mssv ${mssv}`);
                 }
@@ -75,23 +75,56 @@ const getGoogleSheet = async (req, res) => {
             return res.send({ message: 'Không có MSSV hợp lệ' });
         }
 
-        const nonExistentMssv = await doesMssvExist(validMssvArray);
-        const existentMssvArray = validMssvArray.filter(mssv => mssv !== nonExistentMssv);
+        const { nonExistentMssv, existentMssvInfo } = await doesMssvExist(validMssvArray);
 
-        if (existentMssvArray.length === 0) {
+        if (existentMssvInfo.length === 0) {
             return res.send({ message: 'Không có MSSV tồn tại trong sheet' });
         }
 
-        existentMssvArray.forEach(mssv => addToCache(mssv.toString().trim(), formattedDate));
+        existentMssvInfo.forEach(({ mssv }) => addToCache(mssv.toString().trim(), formattedDate));
 
-        return res.send({ message: 'Yêu cầu đã được lưu vào bộ nhớ cache.', validMssv: existentMssvArray });
+        // Log non-existent MSSV
+        console.log(`Non-existent MSSV: ${nonExistentMssv}`);
+
+        return res.send({ 
+            message: 'Yêu cầu đã được lưu vào bộ nhớ cache.', 
+            validMssv: existentMssvInfo,
+            nonExistentMssv: nonExistentMssv // Include non-existent MSSV in the response
+        });
     } catch (e) {
         console.error('Error in getGoogleSheet:', e);
         return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
     }
 };
 
+const getAllMssvAndSeats = async (req, res) => {
+    try {
+        const serviceAccountAuth = new JWT({
+            email: process.env.CLIENT_EMAIL,
+            key: process.env.PRIVATE_KEY.split(String.raw`\n`).join('\n'),
+            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+
+        const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
+        await doc.loadInfo();
+
+        const sheet = doc.sheetsByIndex[0];
+        const rows = await sheet.getRows();
+
+        const mssvAndSeats = rows.map(row => ({
+            mssv: row.get('MSSV').trim(),
+            seat: row.get('CHỖ NGỒI')
+        }));
+
+        return res.send(mssvAndSeats);
+    } catch (e) {
+        console.error('Error in getAllMssvAndSeats:', e);
+        return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
+    }
+};
+
 export default {
     getHomepage: getHomepage,
-    getGoogleSheet: getGoogleSheet
+    getGoogleSheet: getGoogleSheet,
+    getAllMssvAndSeats: getAllMssvAndSeats
 };
