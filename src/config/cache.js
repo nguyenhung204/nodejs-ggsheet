@@ -1,11 +1,11 @@
 export const cache = {
     data: [],
     timestamp: null,
-    ttl: 60000 // 1 phút 
+    ttl: 100000 // 100 giây
 };
 
 export const addToCache = (mssvInput, formattedDate) => {
-    // Loại bỏ khoảng trắng và dấu phẩy
+    
     const exists = cache.data.some(item => item.mssvInput === mssvInput);
     if (!exists) {
         cache.data.push({ mssvInput: mssvInput, formattedDate });

@@ -5,7 +5,7 @@ export const isValidMssv = (mssv) => {
     return /^\d{8}$/.test(mssv.toString().trim());
 };
 
-export const doesMssvExist = async (mssvArray) => {
+export const getGoogleSheetRows = async () => {
     const serviceAccountAuth = new JWT({
         email: process.env.CLIENT_EMAIL,
         key: process.env.PRIVATE_KEY.split(String.raw`\n`).join('\n'),
@@ -16,7 +16,11 @@ export const doesMssvExist = async (mssvArray) => {
     await doc.loadInfo();
 
     const sheet = doc.sheetsByIndex[0];
-    const rows = await sheet.getRows();
+    return await sheet.getRows();
+};
+
+export const doesMssvExist = async (mssvArray) => {
+    const rows = await getGoogleSheetRows();
     const sheetMssvMap = new Map(rows.map(row => [row.get('MSSV').trim(), row]));
 
     const nonExistentMssv = mssvArray.filter(mssv => !sheetMssvMap.has(mssv.toString().trim()));

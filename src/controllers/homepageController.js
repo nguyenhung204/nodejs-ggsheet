@@ -1,63 +1,117 @@
 import moment from 'moment-timezone';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
 import 'dotenv/config';
-import { JWT } from 'google-auth-library';
 import { writeDataToCSV } from '../config/writeToCSV.js';
 import { cache, addToCache, clearCache, isCacheEmpty } from '../config/cache.js';
-import { isValidMssv, doesMssvExist } from '../utils/Validator.js';
+import { isValidMssv, doesMssvExist, getGoogleSheetRows } from '../utils/Validator.js';
 
 const sendCachedDataToGoogleSheet = async () => {
-    if (isCacheEmpty()) return;
+    try {
+        console.log('Checking if cache is empty:', isCacheEmpty());
+        if (isCacheEmpty()) return;
 
-    const serviceAccountAuth = new JWT({
-        email: process.env.CLIENT_EMAIL,
-        key: process.env.PRIVATE_KEY.split(String.raw`\n`).join('\n'),
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
+        const rows = await getGoogleSheetRows();
+        const sheetMssvMap = new Map();
+        rows.forEach(row => sheetMssvMap.set(row.get('MSSV').trim(), row));
 
-    const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
-    await doc.loadInfo();
+        const commonMssvSet = new Set();
+        const validCacheData = [];
+        cache.data.forEach(item => {
+            const mssvList = item.mssvInput.split(',').map(mssv => mssv.trim());
+            mssvList.forEach(mssv => {
+                if (sheetMssvMap.has(mssv)) {
+                    commonMssvSet.add(mssv);
+                    validCacheData.push(item);
+                }
+            });
+        });
 
-    const sheet = doc.sheetsByIndex[0];
+        // Ghi dữ liệu hợp lệ vào file CSV trước
+        await writeDataToCSV(validCacheData);
+        console.log('Dữ liệu đã được ghi vào file CSV');
 
-    // Load all sheet data at once for efficiency
-    const rows = await sheet.getRows();
-    const sheetMssvMap = new Map();
-    rows.forEach(row => sheetMssvMap.set(row.get('MSSV').trim(), row));
+        // Chia nhỏ dữ liệu thành các nhóm nhỏ
+        const chunkSize = 25; // Số lượng request mỗi lần gửi
+        const delay = 30000; // 1 phút
 
-    // Process cached data
-    const commonMssv = [];
-    const validCacheData = [];
-    for (const item of cache.data) {
-        const mssvList = item.mssvInput.split(',').map(mssv => mssv.trim());
-        for (const mssv of mssvList) {
-            if (sheetMssvMap.has(mssv)) { // Check existence with Map lookup
-                commonMssv.push(mssv);
-                validCacheData.push(item);
+        const chunks = [];
+        for (let i = 0; i < validCacheData.length; i += chunkSize) {
+            chunks.push(validCacheData.slice(i, i + chunkSize));
+        }
+        console.log(`Số lượng nhóm dữ liệu: ${chunks.length}`);
+        console.log('Chunks:', chunks);
+        let chunkIndex = 0;
+        const intervalId = setInterval(async () => {
+            if (chunkIndex >= chunks.length ) {
+                clearInterval(intervalId);
+                clearCache();
+                console.log('All data has been sent to Google Sheet and cache is cleared.');
+                return;
+            }
 
-                // Update row using Map lookup
-                const row = sheetMssvMap.get(mssv);
-                if (row) {
-                    row.set('ĐIỂM DANH', item.formattedDate);
-                    await row.save();
-                    console.log(`Đã cập nhật dòng dữ liệu cho mssv ${mssv}`);
+            const currentChunk = chunks[chunkIndex];
+            for (const item of currentChunk) {
+                const mssvList = item.mssvInput.split(',').map(mssv => mssv.trim());
+                for (const mssv of mssvList) {
+                    const row = sheetMssvMap.get(mssv);
+                    if (row) {
+                        row.set('ĐIỂM DANH', item.formattedDate);
+                        await row.save();
+                        console.log(`Đã cập nhật dòng dữ liệu cho mssv ${mssv}`);
+                    }
                 }
             }
-        }
+
+            console.log(`Đã gửi nhóm dữ liệu thứ ${chunkIndex + 1} tới Google Sheet`);
+            
+            console.log('Current chunk:', currentChunk);
+
+            console.log('Cache data:', cache.data);
+
+            console.log('Common MSSV:', Array.from(commonMssvSet));
+
+            // Xóa dữ liệu cache của nhóm đã gửi
+            cache.data = cache.data.filter(item => !currentChunk.includes(item));
+
+      
+
+            // Tăng chunkIndex sau khi gửi xong nhóm dữ liệu hiện tại
+            chunkIndex++;
+            console.log('Waiting for the next chunk...', chunkIndex);
+        }, delay);
+    } catch (error) {
+        console.error('Error in sendCachedDataToGoogleSheet:', error);
     }
-
-    // Write valid data to CSV
-    await writeDataToCSV(validCacheData);
-
-    console.log(`Dữ liệu chung giữa cache và Google Sheet: ${commonMssv.length} mssv`);
-    clearCache();
 };
+
 setInterval(sendCachedDataToGoogleSheet, cache.ttl);
 
-let getHomepage = async (req, res) => {
-    return res.render("homepage.ejs");
-};
 
+const getAllMssvAndSeats = async (req, res) => {
+    try {
+        const rows = await getGoogleSheetRows();
+
+        const mssvAndSeats = rows.map(row => {
+            const mssv = row.get('MSSV').trim();
+            const seat = row.get('CHỖ NGỒI');
+
+            if (!mssv || !seat) {
+                return null;
+            }
+
+            if (!isValidMssv(mssv)) {
+                console.warn(`MSSV không hợp lệ: ${mssv}`);
+                return null;
+            }
+
+            return { mssv, seat };
+        }).filter(item => item !== null);
+
+        return res.send(mssvAndSeats);
+    } catch (e) {
+        console.error('Error in getAllMssvAndSeats:', e);
+        return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
+    }
+};
 const getGoogleSheet = async (req, res) => {
     if (!req.body || !req.body.MSSV) {
         return res.status(400).send({ message: 'MSSV is required' });
@@ -83,13 +137,12 @@ const getGoogleSheet = async (req, res) => {
 
         existentMssvInfo.forEach(({ mssv }) => addToCache(mssv.toString().trim(), formattedDate));
 
-        // Log non-existent MSSV
         console.log(`Non-existent MSSV: ${nonExistentMssv}`);
 
-        return res.send({ 
-            message: 'Yêu cầu đã được lưu vào bộ nhớ cache.', 
+        return res.send({
+            message: 'Yêu cầu đã được lưu vào bộ nhớ cache.',
             validMssv: existentMssvInfo,
-            nonExistentMssv: nonExistentMssv // Include non-existent MSSV in the response
+            nonExistentMssv: nonExistentMssv
         });
     } catch (e) {
         console.error('Error in getGoogleSheet:', e);
@@ -97,34 +150,9 @@ const getGoogleSheet = async (req, res) => {
     }
 };
 
-const getAllMssvAndSeats = async (req, res) => {
-    try {
-        const serviceAccountAuth = new JWT({
-            email: process.env.CLIENT_EMAIL,
-            key: process.env.PRIVATE_KEY.split(String.raw`\n`).join('\n'),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
-
-        const doc = new GoogleSpreadsheet(process.env.SHEET_ID, serviceAccountAuth);
-        await doc.loadInfo();
-
-        const sheet = doc.sheetsByIndex[0];
-        const rows = await sheet.getRows();
-
-        const mssvAndSeats = rows.map(row => ({
-            mssv: row.get('MSSV').trim(),
-            seat: row.get('CHỖ NGỒI')
-        }));
-
-        return res.send(mssvAndSeats);
-    } catch (e) {
-        console.error('Error in getAllMssvAndSeats:', e);
-        return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
-    }
-};
-
 export default {
-    getHomepage: getHomepage,
+    getHomepage: async (req, res) => res.render("homepage.ejs"),
     getGoogleSheet: getGoogleSheet,
-    getAllMssvAndSeats: getAllMssvAndSeats
+    getAllMssvAndSeats: getAllMssvAndSeats,
+    sendCachedDataToGoogleSheet: sendCachedDataToGoogleSheet
 };
