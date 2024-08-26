@@ -41,7 +41,7 @@ export const writeDataToCSV = async (data) => {
         path: filePath,
         header: [
             { id: 'mssvInput', title: 'MSSV' },
-            { id: 'formattedDate', title: 'Điểm danh' }
+            { id: 'formattedDate', title: 'Điểm Danh' }
         ],
         append: true // Append dữ liệu mới vào file
     });
