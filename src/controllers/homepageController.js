@@ -157,7 +157,7 @@ const getGoogleSheet = async (req, res) => {
         console.log(`Non-existent MSSV: ${nonExistentMssv}`);
 
         return res.send({
-            message: 'YÊU CẦU ĐÃ ĐƯỢC LƯU VÀO BỘ NHỚ CACHE',
+            message: 'ĐIỂM DANH THÀNH CÔNG',
             validMssv: existentMssvInfo,
             nonExistentMssv: nonExistentMssv
         });
