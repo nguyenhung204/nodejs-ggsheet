@@ -103,7 +103,7 @@ const getAllMssvAndSeats = async (req, res) => {
                 return null;
             }
 
-            return { mssv, seat };
+            return { mssv, message : "Điểm Danh Thành Công"};
         }).filter(item => item !== null);
 
         return res.send(mssvAndSeats);
