@@ -93,7 +93,7 @@ const getAllMssv = async (req, res) => {
         const mssvAndMessage = rows.map(row => {
             const mssv = row.get('MSSV').trim();
 
-            if (!mssv || !seat) {
+            if (!mssv) {
                 return null;
             }
 
