@@ -86,13 +86,12 @@ const sendCachedDataToGoogleSheet = async () => {
 setInterval(sendCachedDataToGoogleSheet, cache.ttl);
 
 
-const getAllMssvAndSeats = async (req, res) => {
+const getAllMssv = async (req, res) => {
     try {
         const rows = await getGoogleSheetRows();
 
-        const mssvAndSeats = rows.map(row => {
+        const mssvAndMessage = rows.map(row => {
             const mssv = row.get('MSSV').trim();
-            const seat = row.get('CHỖ NGỒI');
 
             if (!mssv || !seat) {
                 return null;
@@ -106,9 +105,9 @@ const getAllMssvAndSeats = async (req, res) => {
             return { mssv, message : "Điểm Danh Thành Công"};
         }).filter(item => item !== null);
 
-        return res.send(mssvAndSeats);
+        return res.send(mssvAndMessage);
     } catch (e) {
-        console.error('Error in getAllMssvAndSeats:', e);
+        console.error('Error in getAllMssv:', e);
         return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
     }
 };
@@ -153,6 +152,6 @@ const getGoogleSheet = async (req, res) => {
 export default {
     getHomepage: async (req, res) => res.render("homepage.ejs"),
     getGoogleSheet: getGoogleSheet,
-    getAllMssvAndSeats: getAllMssvAndSeats,
+    getAllMssv: getAllMssv,
     sendCachedDataToGoogleSheet: sendCachedDataToGoogleSheet
 };

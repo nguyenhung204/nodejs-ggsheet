@@ -29,7 +29,7 @@ export const doesMssvExist = async (mssvArray) => {
         .map(mssv => ({
             mssv,
             // seat: sheetMssvMap.get(mssv.toString().trim()).get('CHỖ NGỒI'),
-            message : "MSSV đã tồn tại"
+            message : "Điểm danh thành công"
         }));
 
     return { nonExistentMssv, existentMssvInfo };
