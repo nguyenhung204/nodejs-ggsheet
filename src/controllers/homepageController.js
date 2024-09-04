@@ -86,31 +86,31 @@ const sendCachedDataToGoogleSheet = async () => {
 setInterval(sendCachedDataToGoogleSheet, cache.ttl);
 
 
-const getAllMssv = async (req, res) => {
-    try {
-        const rows = await getGoogleSheetRows();
+// const getAllMssv = async (req, res) => {
+//     try {
+//         const rows = await getGoogleSheetRows();
 
-        const mssvAndMessage = rows.map(row => {
-            const mssv = row.get('MSSV').trim();
+//         const mssvAndMessage = rows.map(row => {
+//             const mssv = row.get('MSSV').trim();
 
-            if (!mssv) {
-                return null;
-            }
+//             if (!mssv) {
+//                 return null;
+//             }
 
-            if (!isValidMssv(mssv)) {
-                console.warn(`MSSV không hợp lệ: ${mssv}`);
-                return null;
-            }
+//             if (!isValidMssv(mssv)) {
+//                 console.warn(`MSSV không hợp lệ: ${mssv}`);
+//                 return null;
+//             }
 
-            return { mssv, message : "Điểm Danh Thành Công"};
-        }).filter(item => item !== null);
+//             return { mssv, message : "Điểm Danh Thành Công"};
+//         }).filter(item => item !== null);
 
-        return res.send(mssvAndMessage);
-    } catch (e) {
-        console.error('Error in getAllMssv:', e);
-        return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
-    }
-};
+//         return res.send(mssvAndMessage);
+//     } catch (e) {
+//         console.error('Error in getAllMssv:', e);
+//         return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
+//     }
+// };
 const getGoogleSheet = async (req, res) => {
     if (!req.body || !req.body.MSSV) {
         return res.status(400).send({ message: 'MSSV is required' });
@@ -152,6 +152,6 @@ const getGoogleSheet = async (req, res) => {
 export default {
     getHomepage: async (req, res) => res.render("homepage.ejs"),
     getGoogleSheet: getGoogleSheet,
-    getAllMssv: getAllMssv,
+    // getAllMssv: getAllMssv,
     sendCachedDataToGoogleSheet: sendCachedDataToGoogleSheet
 };
