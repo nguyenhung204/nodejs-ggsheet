@@ -31,7 +31,7 @@ const sendCachedDataToGoogleSheet = async () => {
 
         // Chia nhỏ dữ liệu thành các nhóm nhỏ
         const chunkSize = 25; // Số lượng request mỗi lần gửi
-        const delay = 30000; // 1 phút
+        const delay = 40000; // 30 giây
 
         const chunks = [];
         for (let i = 0; i < validCacheData.length; i += chunkSize) {
@@ -39,10 +39,12 @@ const sendCachedDataToGoogleSheet = async () => {
         }
         console.log(`Số lượng nhóm dữ liệu: ${chunks.length}`);
         console.log('Chunks:', chunks);
+        clearCache();
+
         let chunkIndex = 0;
-        const intervalId = setInterval(async () => {
-            if (chunkIndex >= chunks.length ) {
-                clearInterval(intervalId);
+
+        const processChunk = async () => {
+            if (chunkIndex >= chunks.length) {
                 clearCache();
                 console.log('All data has been sent to Google Sheet and cache is cleared.');
                 return;
@@ -62,22 +64,24 @@ const sendCachedDataToGoogleSheet = async () => {
             }
 
             console.log(`Đã gửi nhóm dữ liệu thứ ${chunkIndex + 1} tới Google Sheet`);
-            
             console.log('Current chunk:', currentChunk);
-
             console.log('Cache data:', cache.data);
-
             console.log('Common MSSV:', Array.from(commonMssvSet));
 
             // Xóa dữ liệu cache của nhóm đã gửi
             cache.data = cache.data.filter(item => !currentChunk.includes(item));
 
-      
-
             // Tăng chunkIndex sau khi gửi xong nhóm dữ liệu hiện tại
             chunkIndex++;
             console.log('Waiting for the next chunk...', chunkIndex);
-        }, delay);
+
+            // Đặt thời gian chờ cho lần xử lý tiếp theo
+            setTimeout(processChunk, delay);
+        };
+
+        // Bắt đầu xử lý ngay lập tức
+        processChunk();
+
     } catch (error) {
         console.error('Error in sendCachedDataToGoogleSheet:', error);
     }
@@ -125,21 +129,35 @@ const getGoogleSheet = async (req, res) => {
 
         const validMssvArray = mssvArray.filter(mssv => isValidMssv(mssv));
         if (validMssvArray.length === 0) {
-            return res.send({ message: 'Không có MSSV hợp lệ' });
+            return res.send({ message: 'MSSV KHÔNG HỢP LỆ' });
+        }
+
+        
+        const rows = await getGoogleSheetRows();
+        const sheetMssvMap = new Map(rows.map(row => [row.get('MSSV').trim(), row]));
+
+        const existentMssvWithDate = validMssvArray.filter(mssv => {
+            const row = sheetMssvMap.get(mssv.toString().trim());
+            return row && !isNaN(Date.parse(row.get('ĐIỂM DANH')));
+        });
+
+        if (existentMssvWithDate.length > 0) {
+            return res.send({ message: 'SINH VIÊN ĐÃ ĐIỂM DANH' });
         }
 
         const { nonExistentMssv, existentMssvInfo } = await doesMssvExist(validMssvArray);
 
         if (existentMssvInfo.length === 0) {
-            return res.send({ message: 'Không có MSSV tồn tại trong sheet' });
+            return res.send({ message: 'MSSV KHÔNG TỒN TẠI' });
         }
+
 
         existentMssvInfo.forEach(({ mssv }) => addToCache(mssv.toString().trim(), formattedDate));
 
         console.log(`Non-existent MSSV: ${nonExistentMssv}`);
 
         return res.send({
-            message: 'Yêu cầu đã được lưu vào bộ nhớ cache.',
+            message: 'YÊU CẦU ĐÃ ĐƯỢC LƯU VÀO BỘ NHỚ CACHE',
             validMssv: existentMssvInfo,
             nonExistentMssv: nonExistentMssv
         });

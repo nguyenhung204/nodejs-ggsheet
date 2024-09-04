@@ -1,7 +1,7 @@
 export const cache = {
     data: [],
     timestamp: null,
-    ttl: 100000 // 100 giây
+    ttl: 60000 // 60 giây
 };
 
 export const addToCache = (mssvInput, formattedDate) => {
