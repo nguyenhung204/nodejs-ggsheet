@@ -5,6 +5,7 @@ import initWebRoutes from "./routes/web.js";
 import configViewEngine from "./config/viewEngine.js";
 import { writeDataToCSV } from './config/writeToCSV.js';
 import fs from 'fs';
+import compression from 'compression';
 
 const filePath = 'public/data.csv';
 const fileExists = fs.existsSync(filePath);
@@ -19,6 +20,8 @@ if (!fileExists) {
 
 let app = express();
 
+// Use compression middleware
+app.use(compression());
 //use body-parser to post data
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

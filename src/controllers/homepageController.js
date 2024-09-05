@@ -4,6 +4,8 @@ import { writeDataToCSV } from '../config/writeToCSV.js';
 import { cache, addToCache, clearCache, isCacheEmpty } from '../config/cache.js';
 import { isValidMssv, doesMssvExist, getGoogleSheetRows } from '../utils/Validator.js';
 
+const sentMssvArray = []; // Mảng lưu trữ MSSV đã điểm danh
+
 const sendCachedDataToGoogleSheet = async () => {
     try {
         console.log('Checking if cache is empty:', isCacheEmpty());
@@ -18,10 +20,8 @@ const sendCachedDataToGoogleSheet = async () => {
         cache.data.forEach(item => {
             const mssvList = item.mssvInput.split(',').map(mssv => mssv.trim());
             mssvList.forEach(mssv => {
-                if (sheetMssvMap.has(mssv)) {
                     commonMssvSet.add(mssv);
                     validCacheData.push(item);
-                }
             });
         });
 
@@ -132,38 +132,25 @@ const getGoogleSheet = async (req, res) => {
             return res.send({ message: 'MSSV KHÔNG HỢP LỆ' });
         }
 
-        
-        const rows = await getGoogleSheetRows();
-        const sheetMssvMap = new Map(rows.map(row => [row.get('MSSV').trim(), row]));
-
-        const existentMssvWithDate = validMssvArray.filter(mssv => {
-            const row = sheetMssvMap.get(mssv.toString().trim());
-            return row && !isNaN(Date.parse(row.get('ĐIỂM DANH')));
-        });
-
-        if (existentMssvWithDate.length > 0) {
-            return res.send({ message: 'SINH VIÊN ĐÃ ĐIỂM DANH' });
-        }
 
         const { nonExistentMssv, existentMssvInfo } = await doesMssvExist(validMssvArray);
-
-        if (existentMssvInfo.length === 0) {
-            return res.send({ message: 'MSSV KHÔNG TỒN TẠI' });
-        }
-
-
-        existentMssvInfo.forEach(({ mssv }) => addToCache(mssv.toString().trim(), formattedDate));
+        let responseMessage = '';
+        existentMssvInfo.forEach(({ mssv }) => {
+            if (!sentMssvArray.includes(mssv)) { // Kiểm tra MSSV đã điểm danh chưa
+                addToCache(mssv.toString().trim(), formattedDate);
+                sentMssvArray.push(mssv); // Lưu MSSV vào mảng
+                responseMessage = 'ĐIỂM DANH THÀNH CÔNG';
+            } else {
+                responseMessage = 'SINH VIÊN ĐÃ ĐIỂM DANH';
+            }
+        });
 
         console.log(`Non-existent MSSV: ${nonExistentMssv}`);
 
-        return res.send({
-            message: 'ĐIỂM DANH THÀNH CÔNG',
-            validMssv: existentMssvInfo,
-            nonExistentMssv: nonExistentMssv
-        });
+        return res.send({ message: responseMessage });
     } catch (e) {
         console.error('Error in getGoogleSheet:', e);
-        return res.status(500).send({ message: "Oops! Đã có lỗi xảy ra, vui lòng thử lại sau" });
+        return res.status(500);
     }
 };
 

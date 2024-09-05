@@ -27,8 +27,7 @@ export const doesMssvExist = async (mssvArray) => {
     const existentMssvInfo = mssvArray
         .filter(mssv => sheetMssvMap.has(mssv.toString().trim()))
         .map(mssv => ({
-            mssv,
-            message : "ĐIỂM DANH THÀNH CÔNG"
+            mssv
         }));
 
     return { nonExistentMssv, existentMssvInfo };
